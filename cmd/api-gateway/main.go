@@ -5,7 +5,9 @@ import (
 	"log/slog"
 
 	"github.com/notification-system-moxicom/api-gateway/internal/config"
+	"github.com/notification-system-moxicom/api-gateway/internal/http/handlers"
 	"github.com/notification-system-moxicom/api-gateway/internal/kafka"
+	"github.com/notification-system-moxicom/api-gateway/internal/server"
 	"github.com/notification-system-moxicom/api-gateway/internal/validation"
 	"github.com/notification-system-moxicom/api-gateway/pkg/logger"
 )
@@ -24,7 +26,7 @@ func main() {
 	}
 
 	schemaFiles := map[string]string{
-		"notification_message": "schemas/notification_message.json",
+		"notification_message": "schemas/send_notification.json",
 	}
 	validator, err := validation.NewJSONSchemaMessageValidator(schemaFiles)
 	if err != nil {
@@ -54,5 +56,7 @@ func main() {
 		return
 	}
 
-	slog.Info("successfully produced test message")
+	httpHandlers := handlers.NewHandlers()
+
+	server.NewServer(httpHandlers)
 }

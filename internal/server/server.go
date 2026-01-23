@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,8 +21,6 @@ const (
 	applicationJSONContentType = "application/json"
 	readHeaderTimeout          = 0
 	shutdownTimeout            = 30 * time.Second
-
-	xRequestIDHeader = "X-Request-Id"
 )
 
 type Config struct {
@@ -31,9 +30,8 @@ type Config struct {
 }
 
 type HTTPHandlers interface {
-	MockHandler(w http.ResponseWriter, r *http.Request)
+	api.ServerInterface
 }
-
 type Server struct {
 	httpServer *http.Server
 	handlers   HTTPHandlers
@@ -61,7 +59,7 @@ func (s *Server) AddHTTPServer(c Config) {
 	mux.Use(cors.Handler(corsOptions))
 
 	mux.Route("/api/api-gateway/v1", func(r chi.Router) {
-		r.Mount("/", api.Handler(nil)) // TODO: fixme. replace nil with s.handlers
+		r.Mount("/", api.Handler(s.handlers)) // TODO: fixme. replace nil with s.handlers
 	})
 
 	s.httpServer = &http.Server{
@@ -87,7 +85,7 @@ func (s *Server) Run() {
 
 	// Block until we receive a signal
 	<-stop
-	// s.logger.Info("Shutdown signal received, initiating HTTP server graceful shutdown...")
+	slog.Info("Shutdown signal received, initiating HTTP server graceful shutdown...")
 
 	// Create a context with timeout for shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -95,7 +93,7 @@ func (s *Server) Run() {
 
 	// Shutdown HTTP server
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		// s.logger.Error("HTTP server shutdown error: ", err)
+		slog.Error("HTTP server shutdown error: ", err)
 	} else {
 		// s.logger.Info("HTTP server shutdown complete")
 	}
